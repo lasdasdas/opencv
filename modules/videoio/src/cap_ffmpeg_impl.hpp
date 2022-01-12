@@ -409,7 +409,7 @@ struct CvCapture_FFMPEG
     void close();
 
     double getProperty(int) const;
-    bool setProperty(int, double);
+    bool setProperty(int, long);
     bool grabFrame();
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
 
@@ -1256,7 +1256,7 @@ void CvCapture_FFMPEG::seek(double sec)
     seek((int64_t)(sec * get_fps() + 0.5));
 }
 
-bool CvCapture_FFMPEG::setProperty( int property_id, double value )
+bool CvCapture_FFMPEG::setProperty( int property_id, long value )
 {
     if( !video_st ) return false;
 
@@ -1665,6 +1665,23 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 /// write a frame with FFMPEG
 bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int width, int height, int cn, int origin )
 {
+
+    if (cn != 3 && input_pix_fmt == AV_PIX_FMT_BGR24 && !(oc->oformat->flags & AVFMT_RAWPICTURE)) {
+        AVPacket pkt;
+        av_init_packet(&pkt);
+
+#ifndef PKT_FLAG_KEY
+#define PKT_FLAG_KEY AV_PKT_FLAG_KEY
+#endif
+
+        pkt.flags |= PKT_FLAG_KEY;
+        pkt.stream_index= video_st->index;
+        pkt.data= (uint8_t *)data;
+        pkt.size= step;
+        av_write_frame(oc, &pkt);
+	return true;
+    }
+
     // check parameters
     if (input_pix_fmt == AV_PIX_FMT_BGR24) {
         if (cn != 3) {
@@ -1680,8 +1697,8 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
         assert(false);
     }
 
-    if( (width & -2) != frame_width || (height & -2) != frame_height || !data )
-        return false;
+    if( (width & -2) != frame_width || (height & -2) != frame_height || !data)
+       return false;
     width = frame_width;
     height = frame_height;
 
@@ -2158,7 +2175,7 @@ void cvReleaseCapture_FFMPEG(CvCapture_FFMPEG** capture)
     }
 }
 
-int cvSetCaptureProperty_FFMPEG(CvCapture_FFMPEG* capture, int prop_id, double value)
+int cvSetCaptureProperty_FFMPEG(CvCapture_FFMPEG* capture, int prop_id, long value)
 {
     return capture->setProperty(prop_id, value);
 }

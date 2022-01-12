@@ -79,7 +79,7 @@ protected:
         checkFrameRead(idx, cap);
     }
 public:
-    void doTest()
+	void doTest()
     {
         VideoCapture cap(video_file);
         if (!cap.isOpened())

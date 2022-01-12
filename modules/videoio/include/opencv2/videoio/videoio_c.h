@@ -143,6 +143,21 @@ CVAPI(int) cvGrabFrame( CvCapture* capture );
   frame decompression, flipping etc.
   @warning !!!DO NOT RELEASE or MODIFY the retrieved frame!!!
 */
+
+
+CVAPI(bool) cvGetFormats( CvCapture* capture, int &formats );
+
+CVAPI(bool) cvGetFormatType(CvCapture* capture, int formats, cv::String &formatType, int &width, int &height, int &fps );
+
+CVAPI(bool) cvSetFormatType(CvCapture* capture, int index);
+
+CVAPI(bool) cvSetVideoProperty(CvCapture* capture, int id, int value, int mode);
+
+CVAPI(CvCapture*) cvGetDevices(int &devices);
+
+CVAPI(CvCapture*) cvGetDeviceInfo(int index, cv::String &deviceName, cv::String &vid, cv::String &pid, cv::String &devicePath);
+
+
 CVAPI(IplImage*) cvRetrieveFrame( CvCapture* capture, int streamIdx CV_DEFAULT(0) );
 
 /** @brief Just a combination of cvGrabFrame and cvRetrieveFrame
@@ -207,6 +222,7 @@ enum
     CV_CAP_PROP_AUTOFOCUS     =39,
     CV_CAP_PROP_SAR_NUM       =40,
     CV_CAP_PROP_SAR_DEN       =41,
+    CV_CAP_PROP_AUTO_WHITE_BALANCE =42,
 
     CV_CAP_PROP_AUTOGRAB      =1024, // property for videoio class CvCapture_Android only
     CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING=1025, // readonly, tricky property, returns cpnst char* indeed
@@ -519,7 +535,7 @@ enum
 CVAPI(double) cvGetCaptureProperty( CvCapture* capture, int property_id );
 /** @brief set capture properties
 */
-CVAPI(int)    cvSetCaptureProperty( CvCapture* capture, int property_id, double value );
+CVAPI(int)    cvSetCaptureProperty( CvCapture* capture, int property_id, int value );
 
 /** @brief Return the type of the capturer (eg, ::CV_CAP_VFW, ::CV_CAP_UNICAP)
 

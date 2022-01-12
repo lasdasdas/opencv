@@ -42,6 +42,9 @@
 #include "precomp.hpp"
 #include "cap_intelperc.hpp"
 #include "cap_dshow.hpp"
+#include <iostream>
+#include <string.h>
+using namespace std;
 
 #ifdef HAVE_MFX
 #include "cap_mfx_reader.hpp"
@@ -80,6 +83,13 @@ static inline double icvGetCaptureProperty( const CvCapture* capture, int id )
     return capture ? capture->getProperty(id) : 0;
 }
 
+	/*!!!!!!!-------------------ADDED BY E-CON SYSTEMS----------!!!!!!!! */
+static inline bool icvGetVideoProperty( CvCapture* capture, int id, int &min, int &max, int &steppingDelta, int &supportedMode, int &currentValue, int &currentMode, int &defaultValue)
+{
+    return capture ? capture->getProperty(id, min, max, steppingDelta, supportedMode, currentValue, currentMode, defaultValue) : 0;
+}
+	/*!!!!!!!---------------------------END-----------------------!!!!!!!! */
+
 CV_IMPL void cvReleaseCapture( CvCapture** pcapture )
 {
     if( pcapture && *pcapture )
@@ -98,6 +108,22 @@ CV_IMPL IplImage* cvQueryFrame( CvCapture* capture )
     return capture->retrieveFrame(0);
 }
 
+	/*!!!!!!!-------------------ADDED BY E-CON SYSTEMS----------!!!!!!!! */
+CV_IMPL bool cvGetFormats( CvCapture* capture, int &formats )
+{
+    return capture ? capture->getFormats(formats) : 0;
+}
+
+CV_IMPL bool cvGetFormatType( CvCapture* capture, int formats, String &formatType, int &width, int &height, int &fps)
+{
+    return capture ? capture->getFormatType(formats, formatType, width, height, fps) : 0;
+}
+
+CV_IMPL bool cvSetFormatType( CvCapture* capture, int index)
+{
+    return capture ? capture->setFormatType(index) : 0;
+}
+	/*!!!!!!!---------------------------END-----------------------!!!!!!!! */
 
 CV_IMPL int cvGrabFrame( CvCapture* capture )
 {
@@ -114,10 +140,18 @@ CV_IMPL double cvGetCaptureProperty( CvCapture* capture, int id )
     return icvGetCaptureProperty(capture, id);
 }
 
-CV_IMPL int cvSetCaptureProperty( CvCapture* capture, int id, double value )
+CV_IMPL int cvSetCaptureProperty( CvCapture* capture, int id, int value )
 {
-    return capture ? capture->setProperty(id, value) : 0;
+    //return capture ? capture->setProperty(id, value) : 0;
+    return capture->setProperty(id, value);
 }
+
+	/*!!!!!!!-------------------ADDED BY E-CON SYSTEMS----------!!!!!!!! */
+CV_IMPL bool cvSetVideoProperty( CvCapture* capture, int id, int value, int mode )
+{
+    return capture ? capture->setProperty(id, value, mode) : 0;
+}
+	/*!!!!!!!---------------------------END-----------------------!!!!!!!! */
 
 CV_IMPL int cvGetCaptureDomain( CvCapture* capture)
 {
@@ -154,6 +188,48 @@ static bool get_capture_debug_flag()
         } \
 }
 
+	/*!!!!!!!-------------------ADDED BY E-CON SYSTEMS----------!!!!!!!! */
+CV_IMPL CvCapture * cvGetDevices(int &devices)
+{
+    int pref = 0;
+    CvCapture *capture = 0;
+
+    switch (pref)
+    {
+    default:
+        if(pref)
+            break;
+
+    case CAP_VFW: // or CAP_V4L or CAP_V4L2
+
+#if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
+       TRY_OPEN(capture, cvGetDevices_V4L(devices))
+#endif
+        if (pref) break; // CAP_VFW or CAP_V4L or CAP_V4L2
+    }
+    return capture;
+}
+
+CV_IMPL CvCapture * cvGetDeviceInfo(int index, String &deviceName, String &vid, String &pid, String &devicePath )
+{
+
+    int pref = 0;
+    CvCapture *capture = 0;
+    switch(pref)
+    {
+    default:
+        if(pref)    break;
+
+    case CAP_VFW: // or CAP_V4L or CAP_V4L2
+#if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
+	        TRY_OPEN(capture, cvGetDeviceInfo_V4L(index, deviceName, vid, pid, devicePath))
+#endif
+        if(pref)    break; //CAP_VFW  or CAP_V4L or CAP_V4L2
+    }
+    return capture;
+    //return capture ? capture->getDeviceInfo(index, deviceName, vid, pid, devicePath) : 0;
+}
+	/*!!!!!!!---------------------------END-----------------------!!!!!!!! */
 
 /**
  * Camera dispatching method: index is the camera number.
@@ -520,8 +596,7 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
         if (capture && capture->isOpened())
             return capture;
 #endif
-    }
-
+	}
     // failed open a camera
     return Ptr<IVideoCapture>();
 }
@@ -572,7 +647,7 @@ static Ptr<IVideoCapture> IVideoCapture_create(const String& filename)
     return Ptr<IVideoCapture>();
 }
 
-static Ptr<IVideoWriter> IVideoWriter_create(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor)
+static Ptr<IVideoWriter> IVideoWriter_create(const String& filename, int apiPreference, int _fourcc, long fps, Size frameSize, bool isColor)
 {
     Ptr<IVideoWriter> iwriter;
 #ifdef HAVE_MFX
@@ -627,7 +702,7 @@ bool VideoCapture::open(const String& filename, int apiPreference)
     if (isOpened()) release();
     icap = IVideoCapture_create(filename);
     if (!icap.empty())
-        return true;
+      return true;
 
     cap.reset(cvCreateFileCaptureWithPreference(filename.c_str(), apiPreference));
     return isOpened();
@@ -642,9 +717,10 @@ bool VideoCapture::open(const String& filename)
 
 bool VideoCapture::open(int index)
 {
-    CV_TRACE_FUNCTION();
+	CV_TRACE_FUNCTION();
 
     if (isOpened()) release();
+	//g_i = 0;
     icap = IVideoCapture_create(index);
     if (!icap.empty())
         return true;
@@ -670,6 +746,78 @@ void VideoCapture::release()
     icap.release();
     cap.release();
 }
+
+	/*!!!!!!!-------------------ADDED BY E-CON SYSTEMS----------!!!!!!!! */
+bool VideoCapture::getDevices(CV_OUT int &devices)
+{
+    CV_TRACE_FUNCTION();
+#ifdef HAVE_DSHOW
+    VideoCapture_DShow GD;
+    return GD.getDevices(devices);
+#endif
+#if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
+    cap.reset(cvGetDevices(devices));
+    return true;
+#endif
+    return false;
+}
+
+bool VideoCapture::getDeviceInfo(int index, CV_OUT String &deviceName, CV_OUT String &vid, CV_OUT String &pid, CV_OUT String &devicePath)
+{
+    CV_TRACE_FUNCTION();
+#ifdef HAVE_DSHOW
+    VideoCapture_DShow GDI;
+    return GDI.getDeviceInfo(index, deviceName, vid, pid, devicePath);
+#endif
+#if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
+    cap.reset(cvGetDeviceInfo(index, deviceName, vid, pid, devicePath));
+    return true;
+#endif
+    return false;
+}
+
+bool VideoCapture::getFormats(CV_OUT int &formats)
+{
+    CV_TRACE_FUNCTION();
+    if(!icap.empty())
+        return icap->getFormats(formats);
+    return cvGetFormats(cap, formats);
+}
+
+bool VideoCapture::getFormatType(int formats, CV_OUT String &formatType, CV_OUT int &width, CV_OUT int &height, CV_OUT int &fps)
+{
+    CV_TRACE_FUNCTION();
+    if(!icap.empty())
+	return icap->getFormatType(formats, formatType, width, height, fps);
+    return cvGetFormatType(cap, formats, formatType, width, height, fps);
+}
+
+bool VideoCapture::setFormatType(int index)
+{
+    CV_TRACE_FUNCTION();
+    String formatType;
+    int width, height, fps;
+    if(!icap.empty())
+    {
+		if (icap->getFormatType(index, formatType, width, height, fps))
+		{
+			if (icap->setProperty(CV_CAP_PROP_FOURCC, index))
+			{
+				if (icap->setProperty(CV_CAP_PROP_FRAME_WIDTH, width))
+				{
+					if (icap->setProperty(CV_CAP_PROP_FRAME_HEIGHT, height))
+					{
+						return icap->setProperty(CV_CAP_PROP_FPS, fps);
+					}
+				}
+			}
+		}
+
+	}
+
+    return cvSetFormatType(cap, index);
+}
+	/*!!!!!!!---------------------------END-----------------------!!!!!!!! */
 
 bool VideoCapture::grab()
 {
@@ -757,6 +905,15 @@ bool VideoCapture::set(int propId, double value)
     return cvSetCaptureProperty(cap, propId, value) != 0;
 }
 
+	/*!!!!!!!-------------------ADDED BY E-CON SYSTEMS----------!!!!!!!! */
+bool VideoCapture::set(int propId, int value, int mode)
+{
+//    CV_TRACE_FUNCTION();
+    if (!icap.empty())
+    	return icap->setVideoProperty(propId, value, mode);
+    return cvSetVideoProperty(cap, propId, value, mode) != 0;
+}
+
 double VideoCapture::get(int propId) const
 {
     if (!icap.empty())
@@ -764,6 +921,15 @@ double VideoCapture::get(int propId) const
     return icvGetCaptureProperty(cap, propId);
 }
 
+	/*!!!!!!!-------------------ADDED BY E-CON SYSTEMS----------!!!!!!!! */
+bool VideoCapture::get(int propId, CV_IN_OUT int &min, CV_IN_OUT int &max, CV_IN_OUT int &steppingDelta, CV_IN_OUT int &supportedMode, CV_IN_OUT int &currentValue, CV_IN_OUT int &currentMode, CV_IN_OUT int &defaultValue)
+{
+//    CV_TRACE_FUNCTION();
+    if (!icap.empty())
+ 	return icap->getVideoProperty(propId, min, max, steppingDelta, supportedMode, currentValue, currentMode, defaultValue);
+    return icvGetVideoProperty(cap, propId, min, max, steppingDelta, supportedMode, currentValue, currentMode, defaultValue);
+}
+	/*!!!!!!!---------------------------END-----------------------!!!!!!!! */
 
 VideoWriter::VideoWriter()
 {}
@@ -836,6 +1002,7 @@ void VideoWriter::write(const Mat& image)
     else
     {
         IplImage _img = image;
+	_img.imageSize = image.cols;
         cvWriteFrame(writer, &_img);
     }
 }
