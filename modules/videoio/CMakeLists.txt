@@ -301,6 +301,11 @@ endmacro()
 if(NOT BUILD_opencv_world)
   ocv_videoio_configure_target()
 endif()
+target_link_libraries(
+        opencv_videoio PRIVATE
 
+        udev
+    )
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
+
